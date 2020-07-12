@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name:mycloud
+  labels:
+    app:mycloud
+spec:
+ ports:
+   - port: 80
+    nodePort: 30040
+ selector:
+   app:mycloud
+   tier: frontend
+ type: LoadBalancer
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+ name: mc-pvc
+ labels:
+   app:mycloud
+spec:
+ accessModes:
+ - ReadWriteOnce
+ resources:
+   requests:
+    storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:mycloud
+  labels:
+    app:mycloud
+spec:
+  selector:
+    matchLabels:
+       app:mycloud
+       tier: frontend
+ strategy:
+     type: Recreate
+ template:
+   metadata:
+     labels:
+      app:mycloud
+      tier: frontend
+  spec:
+   containers:
+     - image:mycloud:latest
+       name:mycloud
+       env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+             secretKeyRef:
+                name: mysql-passwd
+                key: password
+         - name: MYSQL_USER
+           value: HarshSrivastava
+         - name: MYSQL_PASSWORD
+           valueFrom:
+               secretKeyRef:
+                 name: mysqluser-passwd
+                 key: usrpasswd
+        - name: MYSQL_DATABASE
+          value: mydbvalue
+        ports:
+         - containerPort: 80
+        name:mycloud
+       volumeMounts:
+         - name: mc-pv
+          mountPath: /var/www/html
+  volumes:
+    - name: mc-pv
+      persistentVolumeClaim:
+     
+      claimName: mc-pvc 

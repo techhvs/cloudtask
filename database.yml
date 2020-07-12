@@ -1,0 +1,75 @@
+apiVersion: v1
+kind: Service
+metadata:
+ name: oc-mariadb
+ labels:
+  app: owncloud
+spec:
+ ports:
+  - port: 3306
+ selector:
+  app: owncloud
+  tier: database
+ clusterIP: None
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+ name: db-pvc
+ labels:
+  app: owncloud
+spec:
+ accessModes:
+ - ReadWriteOnce
+ resources:
+  requests:
+    storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+ name: oc-mariadb
+ labels:
+   app: owncloud
+ spec:
+  selector:
+     matchLabels:
+        app: owncloud
+        tier: database
+   strategy:
+     type: Recreate
+ template:
+   metadata:
+    labels:
+      app: owncloud
+      tier: database
+ spec:
+ containers:
+ - image: mariadb:latest
+   name: database
+   env:
+   - name: MYSQL_ROOT_PASSWORD
+     valueFrom:
+     secretKeyRef:
+  - name: mysql-passwd
+    key: password
+  - name: MYSQL_USER
+    value: Harsh
+  - name: MYSQL_PASSWORD
+    valueFrom:
+       secretKeyRef:
+       name: mysqluser-passwd
+       key: usrpasswd
+  - name: MYSQL_DATABASE
+    value: mydb
+  ports:
+   - containerPort: 3306
+     name: mysql
+   volumeMounts:
+    - name: db-pv
+      mountPath: /var/lib/mysql
+  volumes:
+    - name: db-pv
+  persistentVolumeClaim:
+ 
+      claimName: db-pvc
